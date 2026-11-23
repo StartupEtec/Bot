@@ -1,0 +1,18 @@
+{
+  "name": "laborin-telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chatbot de atención de Laborin con integración a Telegram Bot API",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "demo": "node src/demo.js",
+    "test": "node --test",
+    "lint": "node scripts/check.mjs",
+    "check": "npm run lint && npm test"
+  },
+  "dependencies": {}
+}
