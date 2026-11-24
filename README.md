@@ -215,3 +215,34 @@ En Telegram, `/notificar` hace lo mismo con un chat ID o con los administradores
 **Placeholders:** token real, IDs de admin, URL/JWT del backend, `CHANNEL_AUTH_TOKEN`, `BOT_LINKING_SECRET` y, si aplica, `TELEGRAM_WEBHOOK_URL` HTTPS con su secreto.
 
 Con `BOT_DRY_RUN=true` y `npm run demo` se puede validar todo sin credenciales reales.
+
+---
+
+## 11. Docker
+
+```bash
+cd /home/julian/Startup/Bot
+cp .env.example .env
+docker compose up -d --build
+docker compose logs -f bot
+docker compose ps
+```
+
+El gateway queda en `http://localhost:3001` (o el `PORT` configurado) y responde `GET /health`. El `.env` se inyecta como variables de entorno: **no** se copia dentro de la imagen (`.dockerignore`).
+
+Si el backend corre en el host (compose de `Backend`), cambiá en `.env`:
+
+```env
+LABORIN_API_BASE_URL=http://host.docker.internal:3000/api/v1
+```
+
+`extra_hosts: host.docker.internal:host-gateway` ya está configurado en `docker-compose.yml`. Si el backend está en otra red de Compose, usá el nombre del servicio en vez de `host.docker.internal`.
+
+Para modo webhook, `TELEGRAM_WEBHOOK_URL` debe ser una URL HTTPS públicamente alcanzable que apunte al puerto publicado; si está vacío el contenedor usa polling.
+
+Sin Compose:
+
+```bash
+docker build -t laborin-bot .
+docker run --rm -p 3001:3001 -e BOT_DRY_RUN=true -e TELEGRAM_BOT_TOKEN=dummy laborin-bot
+```
