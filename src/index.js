@@ -110,7 +110,7 @@ function startGatewayServer({ bot, responder, logger }) {
     json(response, 404, { ok: false, error: 'Not found' });
   });
 
-  server.listen(config.port, () => {
+  server.listen(config.port, '0.0.0.0', () => {
     logger.info?.(
       `Gateway HTTP en :${config.port} (${config.webChannelPath}, ${config.mobileChannelPath}, ${config.webhookPath})`,
     );
@@ -177,10 +177,6 @@ async function main() {
 
   const server = startGatewayServer({ bot, responder, logger });
 
-  if (config.webhookUrl) {
-    return;
-  }
-
   const controller = new AbortController();
   const shutdown = () => {
     logger.info?.('Señal de salida recibida.');
@@ -191,6 +187,10 @@ async function main() {
 
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+
+  if (config.webhookUrl) {
+    return;
+  }
 
   await bot.startPolling({ signal: controller.signal });
 }
