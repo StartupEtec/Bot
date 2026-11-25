@@ -47,10 +47,15 @@ El despacho (`bot.handleMessage`) es independiente del transporte: agregar un ca
 ```
 Bot/
 ├── .env.example
+├── .github/workflows/ci.yml     # tests + cobertura en cada PR
+├── .github/workflows/docs.yml   # documentación + GitHub Pages
 ├── .gitignore
+├── docs/index.html              # documentación generada (no editar a mano)
 ├── package.json
 ├── README.md
 ├── scripts/check.mjs
+├── scripts/coverage.mjs          # cobertura lcov + umbral del 60 %
+├── scripts/docs.mjs              # generador de docs/index.html
 ├── src/
 │   ├── index.js                  # entry point: polling/webhook + gateway HTTP
 │   ├── bot.js                    # dispatcher multicanal y loop de polling
@@ -74,7 +79,7 @@ Bot/
 │   │   ├── messages.js
 │   │   └── callbacks.js
 │   └── utils/telegramText.js
-└── tests/                        # 25 pruebas
+└── tests/                        # 38 pruebas (servicios, flujos y endpoints HTTP)
 ```
 
 ---
@@ -112,12 +117,21 @@ El bot imprime `Mensaje recibido de chat_id=...` en consola para que puedas copi
 ## 5. Ejecución
 
 ```bash
-npm start        # polling de Telegram + gateway HTTP en :3001
-npm run demo     # simula Telegram, web y móvil; imprime las 3 salidas
-npm test         # 25 pruebas
-npm run lint     # sintaxis de src/, tests/ y scripts/
-npm run check    # lint + tests
+npm start              # polling de Telegram + gateway HTTP en :3001
+npm run demo           # simula Telegram, web y móvil; imprime las 3 salidas
+npm test               # 38 pruebas
+npm run lint           # sintaxis de src/, tests/ y scripts/
+npm run check          # lint + tests
+npm run test:coverage  # tests + lcov + umbral mínimo del 60 %
+npm run docs           # regenera docs/index.html
+npm run docs:check     # falla si la documentación generada está desactualizada
 ```
+
+`npm run test:coverage` genera `coverage/lcov.info` y `coverage/coverage-summary.json` (carpeta ignorada por git) y falla si la cobertura de líneas baja del 60 %. El umbral se puede cambiar con `COVERAGE_MIN_LINES=70 npm run test:coverage`.
+
+CI: `.github/workflows/ci.yml` corre en **cada Pull Request** (y en push a `main`/`MVP`) con Node 20: `npm run check`, `npm run test:coverage`, publica el resumen en el step summary y sube `coverage/` como artifact. Si falla un test o la cobertura, el workflow falla y bloquea el merge.
+
+Documentación: `.github/workflows/docs.yml` corre en push y PR, valida `docs/index.html` con `npm run docs:check` y lo sube como artifact. En push a `main` además publica el sitio en GitHub Pages (activar una vez *Settings → Pages → Source: GitHub Actions*). El HTML se genera desde el README, los comandos reales, los endpoints del gateway, los nombres de las variables de entorno y las FAQs; no incluye valores secretos.
 
 `npm start` siempre levanta el gateway HTTP. Si `TELEGRAM_WEBHOOK_URL` está vacío, además hace polling. Si está configurado, llama a `setWebhook` y deja el servidor esperando updates.
 

@@ -1,0 +1,56 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - MVP
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Lint and run tests
+        run: npm run check
+
+      - name: Run tests with coverage (min 60%)
+        run: npm run test:coverage
+
+      - name: Publish coverage summary
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const total = JSON.parse(fs.readFileSync("coverage/coverage-summary.json", "utf8")).total;
+          const row = (label, key) => `| ${label} | ${total[key].pct}% |`;
+          const table = [
+            "## Cobertura del bot",
+            "",
+            "| Métrica | Cobertura |",
+            "|---|---:|",
+            row("Líneas", "lines"),
+            row("Funciones", "functions"),
+            row("Ramas", "branches"),
+            "",
+          ].join("\n");
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, table);
+          '
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: error

@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 
 import { assertRuntimeConfig, config } from './config.js';
 import { createLogger } from './logger.js';
@@ -28,25 +29,23 @@ function readJson(request) {
     request.on('end', () => {
       try {
         resolve(body ? JSON.parse(body) : {});
-      } catch (error) {
-        reject(error);
+      } catch {
+        reject(new PayloadValidationError('JSON inválido'));
       }
     });
     request.on('error', reject);
   });
 }
 
-function isChannelAuthorized(request) {
-  if (!config.channelAuthToken) return true;
-  return request.headers['x-channel-token'] === config.channelAuthToken;
-}
+export function startGatewayServer({ bot, responder, logger, settings = config }) {
+  const isChannelAuthorized = (request) =>
+    !settings.channelAuthToken ||
+    request.headers['x-channel-token'] === settings.channelAuthToken;
 
-function isTelegramAuthorized(request) {
-  if (!config.webhookSecret) return true;
-  return request.headers['x-telegram-bot-api-secret-token'] === config.webhookSecret;
-}
+  const isTelegramAuthorized = (request) =>
+    !settings.webhookSecret ||
+    request.headers['x-telegram-bot-api-secret-token'] === settings.webhookSecret;
 
-function startGatewayServer({ bot, responder, logger }) {
   const server = http.createServer(async (request, response) => {
     const pathname = (request.url || '').split('?')[0];
 
@@ -60,7 +59,7 @@ function startGatewayServer({ bot, responder, logger }) {
       return;
     }
 
-    if (pathname === config.webhookPath) {
+    if (pathname === settings.webhookPath) {
       if (!isTelegramAuthorized(request)) {
         json(response, 401, { ok: false, error: 'Unauthorized' });
         return;
@@ -77,7 +76,7 @@ function startGatewayServer({ bot, responder, logger }) {
       return;
     }
 
-    if (pathname === config.webChannelPath || pathname === config.mobileChannelPath) {
+    if (pathname === settings.webChannelPath || pathname === settings.mobileChannelPath) {
       if (!isChannelAuthorized(request)) {
         json(response, 401, { ok: false, error: 'Unauthorized' });
         return;
@@ -86,7 +85,7 @@ function startGatewayServer({ bot, responder, logger }) {
       try {
         const body = await readJson(request);
         const message =
-          pathname === config.webChannelPath
+          pathname === settings.webChannelPath
             ? fromWebPayload(body)
             : fromMobilePayload(body);
 
@@ -110,9 +109,9 @@ function startGatewayServer({ bot, responder, logger }) {
     json(response, 404, { ok: false, error: 'Not found' });
   });
 
-  server.listen(config.port, '0.0.0.0', () => {
+  server.listen(settings.port, '0.0.0.0', () => {
     logger.info?.(
-      `Gateway HTTP en :${config.port} (${config.webChannelPath}, ${config.mobileChannelPath}, ${config.webhookPath})`,
+      `Gateway HTTP en :${settings.port} (${settings.webChannelPath}, ${settings.mobileChannelPath}, ${settings.webhookPath})`,
     );
   });
 
@@ -195,7 +194,9 @@ async function main() {
   await bot.startPolling({ signal: controller.signal });
 }
 
-main().catch((error) => {
-  console.error('[FATAL]', error.message);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error('[FATAL]', error.message);
+    process.exitCode = 1;
+  });
+}

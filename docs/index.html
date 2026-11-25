@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bot de Laborin · Documentación</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55;color:#111827;max-width:900px;margin:0 auto;padding:2rem 1rem;}
+  h1{font-size:2rem;margin-bottom:0.25rem;}
+  h2{margin-top:2rem;border-bottom:1px solid #d1d5db;padding-bottom:0.3rem;}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;}
+  th,td{border:1px solid #d1d5db;padding:0.45rem 0.6rem;text-align:left;vertical-align:top;}
+  th{background:#f3f4f6;}
+  pre{background:#f3f4f6;padding:1rem;overflow:auto;border-radius:6px;}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;}
+  footer{margin-top:3rem;color:#6b7280;font-size:0.85rem;}
+</style>
+</head>
+<body>
+<h1>Bot de Laborin · Documentación</h1>
+<p>Chatbot de atención para **Laborin** con integración directa a la **Telegram Bot API** y un gateway HTTP para canales **web** y **móvil**. Vive íntegramente en esta carpeta (`/home/julian/Startup/Bot`): no modifica la landing, el backend ni el frontend.
+
+No usa dependencias de terceros: Node.js 18+ con `fetch` nativo y `node:test`.
+
+---</p>
+
+<h2>Arquitectura</h2>
+<pre>Telegram ──► fromTelegramUpdate ─┐
+Landing  ──► fromWebPayload ─────┼──► bot.handleMessage ──► commands / messages / callbacks
+App      ──► fromMobilePayload ──┘                         │
+                                                          ├──► knowledge/answerEngine (respuesta única)
+                                                          ├──► backendClient (datos opcionales)
+                                                          └──► ChannelResponder ──► Telegram | outbox web | outbox móvil</pre>
+
+<h2>Comandos de Telegram</h2>
+<table>
+<thead><tr><th>Comando</th><th>Descripción</th></tr></thead>
+<tbody>
+<tr><td>/start</td><td>Bienvenida y menú</td></tr>
+<tr><td>/help</td><td>Lista de comandos</td></tr>
+<tr><td>/faq</td><td>Preguntas frecuentes</td></tr>
+<tr><td>/como_funciona</td><td>Pasos del servicio</td></tr>
+<tr><td>/roles</td><td>Cliente y trabajador</td></tr>
+<tr><td>/categorias</td><td>Categorías del backend</td></tr>
+<tr><td>/estado</td><td>Estado del backend</td></tr>
+<tr><td>/contacto</td><td>Canales de atención</td></tr>
+<tr><td>/quees</td><td>qué es Laborin</td></tr>
+<tr><td>/app</td><td>link de la app</td></tr>
+<tr><td>/notificar</td><td>prueba de notificación (admin)</td></tr>
+</tbody>
+</table>
+
+<h2>Endpoints del gateway</h2>
+<table>
+<thead><tr><th>Método</th><th>Ruta</th><th>Descripción</th></tr></thead>
+<tbody>
+<tr><td>GET</td><td>/health</td><td>Healthcheck del gateway.</td></tr>
+<tr><td>POST</td><td>/telegram/webhook</td><td>Updates de Telegram, protegido por x-telegram-bot-api-secret-token.</td></tr>
+<tr><td>POST</td><td>/channels/web</td><td>Chat web: {sessionId, text, startParam?} → messages, con x-channel-token.</td></tr>
+<tr><td>POST</td><td>/channels/mobile</td><td>Chat móvil: {userId, text, role?, startParam?} → messages, con x-channel-token.</td></tr>
+</tbody>
+</table>
+
+<h2>Variables de entorno</h2>
+<p>Solo se listan los nombres. Los valores reales viven en el <code>.env</code> del servidor y nunca en el repositorio.</p>
+<table>
+<thead><tr><th>Variable</th><th>Uso</th></tr></thead>
+<tbody>
+<tr><td>TELEGRAM_BOT_TOKEN</td><td>Reemplazá por el token real provisto por @BotFather.</td></tr>
+<tr><td>TELEGRAM_API_BASE</td><td>Variable de configuración.</td></tr>
+<tr><td>TELEGRAM_ADMIN_CHAT_IDS</td><td>IDs de chat separados por coma. Ejemplo: 123456789,987654321</td></tr>
+<tr><td>TELEGRAM_ALLOWED_CHAT_IDS</td><td>Si se completa, el bot solo atiende esos chats. Vacío = cualquier chat.</td></tr>
+<tr><td>BOT_DRY_RUN</td><td>true = no llama a Telegram; útil para tests y demo sin token.</td></tr>
+<tr><td>BOT_POLLING_TIMEOUT</td><td>Variable de configuración.</td></tr>
+<tr><td>BOT_RETRY_DELAY_MS</td><td>Variable de configuración.</td></tr>
+<tr><td>TELEGRAM_WEBHOOK_URL</td><td>Si se define, el bot usa webhook en lugar de polling. Debe ser HTTPS.</td></tr>
+<tr><td>TELEGRAM_WEBHOOK_PATH</td><td>Variable de configuración.</td></tr>
+<tr><td>TELEGRAM_WEBHOOK_SECRET</td><td>Variable de configuración.</td></tr>
+<tr><td>PORT</td><td>Variable de configuración.</td></tr>
+<tr><td>LABORIN_API_BASE_URL</td><td>Debe apuntar a la base /api/v1 del backend.</td></tr>
+<tr><td>LABORIN_API_ACCESS_TOKEN</td><td>responden con instrucciones en lugar de fallar.</td></tr>
+<tr><td>WEB_CHANNEL_PATH</td><td>Canales web y móvil (gateway HTTP del bot)</td></tr>
+<tr><td>MOBILE_CHANNEL_PATH</td><td>Variable de configuración.</td></tr>
+<tr><td>CHANNEL_AUTH_TOKEN</td><td>Secreto compartido enviado como header x-channel-token. Vacío = sin autenticar.</td></tr>
+<tr><td>BOT_LINKING_SECRET</td><td>Secreto para firmar/verificar tokens de deep-link que vinculan usuario ↔ chat.</td></tr>
+<tr><td>LABORIN_APP_URL</td><td>Links públicos</td></tr>
+<tr><td>LABORIN_LANDING_URL</td><td>Variable de configuración.</td></tr>
+<tr><td>LOG_LEVEL</td><td>Variable de configuración.</td></tr>
+</tbody>
+</table>
+
+<h2>Preguntas frecuentes que responde el bot</h2>
+<table>
+<thead><tr><th>Pregunta</th></tr></thead>
+<tbody>
+<tr><td>¿Qué es Laborin?</td></tr>
+<tr><td>¿Para quién es?</td></tr>
+<tr><td>¿Qué problema resuelve?</td></tr>
+<tr><td>¿Cómo genera confianza?</td></tr>
+<tr><td>¿Está limitada a un rubro?</td></tr>
+<tr><td>¿Dónde vive Laborin?</td></tr>
+</tbody>
+</table>
+
+<footer>Generado automáticamente con <code>npm run docs</code>. No editar a mano.</footer>
+</body>
+</html>

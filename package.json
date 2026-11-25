@@ -11,6 +11,9 @@
     "start": "node src/index.js",
     "demo": "node src/demo.js",
     "test": "node --test",
+    "test:coverage": "node scripts/coverage.mjs",
+    "docs": "node scripts/docs.mjs",
+    "docs:check": "DOCS_CHECK=1 node scripts/docs.mjs",
     "lint": "node scripts/check.mjs",
     "check": "npm run lint && npm test"
   },
